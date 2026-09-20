@@ -10,13 +10,17 @@ function unwrap(json) {
   return json;
 }
 
-async function request(path, { method = 'GET', body, baseUrl } = {}) {
+async function request(path, { method = 'GET', body, baseUrl, signal } = {}) {
   const url = `${baseUrl || config.apiBaseUrl}${path}`;
   const controller = new AbortController();
   const timeoutId = setTimeout(
     () => controller.abort(),
     config.requestTimeoutMs
   );
+
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort());
+  }
 
   try {
     const res = await fetch(url, {

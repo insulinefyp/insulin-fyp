@@ -6,11 +6,7 @@ const Stack = createNativeStackNavigator();
 export default function DashboardStack() {
   return (
     <Stack.Navigator>
-      <Stack.Screen
-        name="DashboardHome"
-        component={DashboardScreen}
-        options={{ title: 'Dashboard' }}
-      />
+      <Stack.Screen name="DashboardHome" component={DashboardScreen} options={{ title: 'Dashboard' }} />
     </Stack.Navigator>
   );
 }

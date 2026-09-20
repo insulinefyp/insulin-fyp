@@ -11,7 +11,6 @@ export function ConfigProvider({ children }) {
       apiBaseUrl,
       setApiBaseUrl,
       requestTimeoutMs: defaultConfig.requestTimeoutMs,
-      isEmulator: defaultConfig.isEmulator,
     }),
     [apiBaseUrl]
   );

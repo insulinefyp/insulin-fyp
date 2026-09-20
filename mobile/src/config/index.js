@@ -3,11 +3,11 @@ import Constants from 'expo-constants';
 
 const API_PORT = 3000;
 
-// Android emulator reaches the host machine at 10.0.2.2.
-// Inside the emulator, localhost is the emulator itself, not your Mac.
+// The Android emulator reaches the host machine at the special alias 10.0.2.2.
+// 127.0.0.1 inside the emulator is the emulator itself, not your Mac.
 const EMULATOR_HOST = '10.0.2.2';
 
-// Your Mac's LAN IP, used when running on a physical device.
+// Your Mac's LAN IP, for a physical device on the same Wi-Fi.
 const LAN_HOST = '192.168.18.133';
 
 function isAndroidEmulator() {
