@@ -1,15 +1,12 @@
 import {
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAuth } from '../../context/AuthContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function WelcomeScreen({ navigation }) {
-  const { signIn } = useAuth();
-
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
@@ -34,13 +31,6 @@ export default function WelcomeScreen({ navigation }) {
             onPress={() => navigation.navigate('Login')}
           >
             <Text style={styles.secondaryText}>Sign in</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.devButton}
-            onPress={() => signIn({ fullName: 'Dev User', role: 'patient' })}
-          >
-            <Text style={styles.devText}>Skip (dev only)</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -71,6 +61,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   secondaryText: { color: '#111', fontSize: 16, fontWeight: '600' },
-  devButton: { paddingVertical: 10, alignItems: 'center' },
-  devText: { color: '#999', fontSize: 13 },
 });

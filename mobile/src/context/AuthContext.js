@@ -1,22 +1,82 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { api } from '../services/api';
+import { saveToken, getToken, clearToken } from '../services/tokenStore';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  // Stage 1.4 replaces this with a token read from expo-secure-store
-  // on app start. The shape of what it exposes does not change.
   const [user, setUser] = useState(null);
-  const [isRestoring] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
+
+  // Runs once on launch. Until it finishes, Routes renders nothing, so the
+  // app never flashes the Welcome screen before jumping to the tabs.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restore() {
+      const token = await getToken();
+
+      if (!token) {
+        if (!cancelled) setIsRestoring(false);
+        return;
+      }
+
+      try {
+        const data = await api.getMe();
+        if (!cancelled) setUser(data.user);
+      } catch (err) {
+        // A rejected token is cleared. A network failure is not: the token
+        // may be perfectly valid and the backend simply unreachable.
+        if (err.code !== 'NETWORK' && err.code !== 'TIMEOUT') {
+          await clearToken();
+        }
+      } finally {
+        if (!cancelled) setIsRestoring(false);
+      }
+    }
+
+    restore();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const signIn = useCallback(async (credentials) => {
+    const data = await api.login(credentials);
+    await saveToken(data.token);
+    setUser(data.user);
+    return data.user;
+  }, []);
+
+  const signUp = useCallback(async (payload) => {
+    const data = await api.register(payload);
+    await saveToken(data.token);
+    setUser(data.user);
+    return data.user;
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await clearToken();
+    setUser(null);
+  }, []);
 
   const value = useMemo(
     () => ({
       user,
       isAuthenticated: Boolean(user),
       isRestoring,
-      signIn: (nextUser) => setUser(nextUser),
-      signOut: () => setUser(null),
+      signIn,
+      signUp,
+      signOut,
     }),
-    [user, isRestoring]
+    [user, isRestoring, signIn, signUp, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
