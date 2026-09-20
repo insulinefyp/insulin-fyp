@@ -58,4 +58,12 @@ const registerSchema = z
     }
   );
 
-module.exports = { registerSchema };
+// Login does not reuse the register rules. A password minimum on sign-in
+// would reject accounts created before the rule changed, and a strict email
+// pattern here just turns a wrong-credentials error into a confusing one.
+const loginSchema = z.object({
+  email: z.string().trim().toLowerCase().min(1, 'Enter your email'),
+  password: z.string().min(1, 'Enter your password'),
+});
+
+module.exports = { registerSchema, loginSchema };
