@@ -1,6 +1,7 @@
 const os = require('os');
 const app = require('./app');
 const config = require('./config');
+const { connectDatabase } = require('./config/database');
 
 function getLanAddresses() {
   const interfaces = os.networkInterfaces();
@@ -17,13 +18,24 @@ function getLanAddresses() {
   return addresses;
 }
 
-app.listen(config.port, config.host, () => {
-  console.log(`\nServer running in ${config.env} mode`);
-  console.log(`  Local:   http://localhost:${config.port}/api/health`);
+async function start() {
+  try {
+    await connectDatabase();
+  } catch (err) {
+    console.error('Startup aborted: database unavailable');
+    process.exit(1);
+  }
 
-  getLanAddresses().forEach((addr) => {
-    console.log(`  Network: http://${addr}:${config.port}/api/health`);
+  app.listen(config.port, config.host, () => {
+    console.log(`\nServer running in ${config.env} mode`);
+    console.log(`  Local:   http://localhost:${config.port}/api/health`);
+
+    getLanAddresses().forEach((addr) => {
+      console.log(`  Network: http://${addr}:${config.port}/api/health`);
+    });
+
+    console.log('');
   });
+}
 
-  console.log('');
-});
+start();
