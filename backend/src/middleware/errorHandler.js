@@ -1,7 +1,6 @@
 const config = require('../config');
 
 function translate(err) {
-  // Duplicate key on a unique index
   if (err.code === 11000) {
     const field = Object.keys(err.keyPattern || {})[0] || 'field';
     return {
@@ -10,17 +9,20 @@ function translate(err) {
       message:
         field === 'email'
           ? 'An account with that email already exists'
-          : `Duplicate value for ${field}`,
+          : 'A conflicting change was saved at the same time. Try again.',
     };
   }
 
-  // Schema-level validation that got past zod
   if (err.name === 'ValidationError') {
-    const first = Object.values(err.errors)[0];
+    const fields = {};
+    Object.entries(err.errors || {}).forEach(([key, e]) => {
+      fields[key] = e.message;
+    });
     return {
       status: 400,
       code: 'VALIDATION_ERROR',
-      message: first?.message || 'Validation failed',
+      message: 'Validation failed',
+      fields,
     };
   }
 
@@ -32,12 +34,13 @@ function translate(err) {
     status: err.status || 500,
     code: err.code || 'INTERNAL_ERROR',
     message: err.message || 'Internal server error',
+    fields: err.fields,
   };
 }
 
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
-  const { status, code, message } = translate(err);
+  const { status, code, message, fields } = translate(err);
 
   console.error(`[ERROR] ${req.method} ${req.originalUrl}: ${code} - ${err.message}`);
 
@@ -46,6 +49,7 @@ function errorHandler(err, req, res, next) {
     error: {
       message,
       code,
+      ...(fields && Object.keys(fields).length > 0 && { fields }),
       ...(config.env === 'development' && { stack: err.stack }),
     },
   });
