@@ -65,7 +65,13 @@ async function request(path, { method = 'GET', body, auth = false } = {}) {
 
 export const api = {
   getHealth: () => request('/health'),
+
   register: (payload) => request('/auth/register', { method: 'POST', body: payload }),
   login: (payload) => request('/auth/login', { method: 'POST', body: payload }),
   getMe: () => request('/auth/me', { auth: true }),
+
+  getProfile: () => request('/patient/profile', { auth: true }),
+  updateProfile: (changes) =>
+    request('/patient/profile', { method: 'PATCH', body: changes, auth: true }),
+  getProfileChanges: () => request('/patient/profile/changes', { auth: true }),
 };

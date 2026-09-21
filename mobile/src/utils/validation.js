@@ -157,3 +157,27 @@ export function validateEmergency(data) {
 
   return errors;
 }
+
+export function validateProfileEdit(data) {
+  const errors = {};
+
+  if (!data.fullName || data.fullName.trim().length < 2) {
+    errors.fullName = 'Enter your full name';
+  }
+
+  const weight = Number(data.weightKg);
+  if (!data.weightKg || Number.isNaN(weight)) {
+    errors.weightKg = 'Enter your weight';
+  } else if (weight < 10 || weight > 300) {
+    errors.weightKg = 'Enter a weight between 10 and 300 kg';
+  }
+
+  const height = Number(data.heightCm);
+  if (!data.heightCm || Number.isNaN(height)) {
+    errors.heightCm = 'Enter your height';
+  } else if (height < 50 || height > 250) {
+    errors.heightCm = 'Enter a height between 50 and 250 cm';
+  }
+
+  return { ...errors, ...validateEmergency(data) };
+}

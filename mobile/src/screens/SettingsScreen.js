@@ -1,14 +1,33 @@
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import config from '../config';
 
-export default function SettingsScreen() {
+export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
 
   function confirmSignOut() {
     Alert.alert('Sign out', 'You will need to sign in again.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: async () => {
+          // Cached data belongs to this user. Without clearing it, the next
+          // person to sign in on this device would briefly see it.
+          queryClient.clear();
+          await signOut();
+        },
+      },
     ]);
   }
 
@@ -19,6 +38,15 @@ export default function SettingsScreen() {
         <Text style={styles.name}>{user?.fullName}</Text>
         <Text style={styles.email}>{user?.email}</Text>
       </View>
+
+      <TouchableOpacity
+        style={styles.navRow}
+        onPress={() => navigation.navigate('Profile')}
+      >
+        <Ionicons name="person-outline" size={20} color="#444" />
+        <Text style={styles.navText}>Patient profile</Text>
+        <Ionicons name="chevron-forward" size={18} color="#bbb" />
+      </TouchableOpacity>
 
       <View style={styles.card}>
         <Text style={styles.cardLabel}>Backend</Text>
@@ -45,6 +73,16 @@ const styles = StyleSheet.create({
   name: { fontSize: 16, fontWeight: '600', color: '#111' },
   email: { fontSize: 13, color: '#666' },
   mono: { fontSize: 12, color: '#444' },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 10,
+    padding: 14,
+  },
+  navText: { flex: 1, fontSize: 15, color: '#111' },
   signOut: {
     borderWidth: 1,
     borderColor: '#b3261e',

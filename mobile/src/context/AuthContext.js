@@ -67,6 +67,12 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // Called after a profile edit so the name shown in Settings stays in step
+  // with the server without a restart.
+  const updateUser = useCallback((nextUser) => {
+    setUser(nextUser);
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -75,8 +81,9 @@ export function AuthProvider({ children }) {
       signIn,
       signUp,
       signOut,
+      updateUser,
     }),
-    [user, isRestoring, signIn, signUp, signOut]
+    [user, isRestoring, signIn, signUp, signOut, updateUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
