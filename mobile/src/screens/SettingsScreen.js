@@ -11,6 +11,16 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import config from '../config';
 
+function NavRow({ icon, label, onPress }) {
+  return (
+    <TouchableOpacity style={styles.navRow} onPress={onPress}>
+      <Ionicons name={icon} size={20} color="#444" />
+      <Text style={styles.navText}>{label}</Text>
+      <Ionicons name="chevron-forward" size={18} color="#bbb" />
+    </TouchableOpacity>
+  );
+}
+
 export default function SettingsScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const queryClient = useQueryClient();
@@ -39,14 +49,16 @@ export default function SettingsScreen({ navigation }) {
         <Text style={styles.email}>{user?.email}</Text>
       </View>
 
-      <TouchableOpacity
-        style={styles.navRow}
+      <NavRow
+        icon="person-outline"
+        label="Patient profile"
         onPress={() => navigation.navigate('Profile')}
-      >
-        <Ionicons name="person-outline" size={20} color="#444" />
-        <Text style={styles.navText}>Patient profile</Text>
-        <Ionicons name="chevron-forward" size={18} color="#bbb" />
-      </TouchableOpacity>
+      />
+      <NavRow
+        icon="medkit-outline"
+        label="Treatment parameters"
+        onPress={() => navigation.navigate('Treatment')}
+      />
 
       <View style={styles.card}>
         <Text style={styles.cardLabel}>Backend</Text>

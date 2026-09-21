@@ -3,6 +3,9 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import ProfileHistoryScreen from '../screens/profile/ProfileHistoryScreen';
+import TreatmentScreen from '../screens/treatment/TreatmentScreen';
+import EditTreatmentScreen from '../screens/treatment/EditTreatmentScreen';
+import TreatmentHistoryScreen from '../screens/treatment/TreatmentHistoryScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -28,6 +31,21 @@ export default function SettingsStack() {
         name="ProfileHistory"
         component={ProfileHistoryScreen}
         options={{ title: 'Change history' }}
+      />
+      <Stack.Screen
+        name="Treatment"
+        component={TreatmentScreen}
+        options={{ title: 'Treatment parameters' }}
+      />
+      <Stack.Screen
+        name="EditTreatment"
+        component={EditTreatmentScreen}
+        options={{ title: 'Edit parameters' }}
+      />
+      <Stack.Screen
+        name="TreatmentHistory"
+        component={TreatmentHistoryScreen}
+        options={{ title: 'Version history' }}
       />
     </Stack.Navigator>
   );

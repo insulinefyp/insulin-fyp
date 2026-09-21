@@ -74,4 +74,10 @@ export const api = {
   updateProfile: (changes) =>
     request('/patient/profile', { method: 'PATCH', body: changes, auth: true }),
   getProfileChanges: () => request('/patient/profile/changes', { auth: true }),
+
+  getTreatment: () => request('/treatment-parameters', { auth: true }),
+  getTreatmentLimits: () => request('/treatment-parameters/limits', { auth: true }),
+  getTreatmentHistory: () => request('/treatment-parameters/history', { auth: true }),
+  createTreatmentVersion: (values) =>
+    request('/treatment-parameters', { method: 'POST', body: values, auth: true }),
 };
