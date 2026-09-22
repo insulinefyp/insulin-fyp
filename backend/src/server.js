@@ -2,6 +2,7 @@ const os = require('os');
 const app = require('./app');
 const config = require('./config');
 const { connectDatabase } = require('./config/database');
+const simulator = require('./simulation/glucoseSimulator');
 
 function getLanAddresses() {
   const interfaces = os.networkInterfaces();
@@ -24,6 +25,12 @@ async function start() {
   } catch (err) {
     console.error('Startup aborted: database unavailable');
     process.exit(1);
+  }
+
+  if (config.simulator.enabled && config.glucose.source === 'simulator') {
+    simulator.start();
+  } else {
+    console.log('Glucose simulator disabled');
   }
 
   app.listen(config.port, config.host, () => {
