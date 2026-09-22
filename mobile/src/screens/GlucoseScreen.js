@@ -1,14 +1,34 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import GlucoseReadingCard from '../components/GlucoseReadingCard';
+import SimulatorPanel from '../components/SimulatorPanel';
+import { useCurrentGlucose } from '../hooks/useGlucose';
 
 export default function GlucoseScreen() {
+  const { data, refetch, isRefetching } = useCurrentGlucose();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Glucose</Text>
-    </View>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}
+    >
+      <GlucoseReadingCard />
+
+      {data ? (
+        <View style={styles.info}>
+          <Text style={styles.infoText}>
+            Source: {data.source} · one reading every {data.intervalSeconds} s ·
+            marked stale after {data.staleAfterSeconds} s without data
+          </Text>
+        </View>
+      ) : null}
+
+      <SimulatorPanel />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 20, fontWeight: '600' },
+  container: { padding: 16, gap: 16 },
+  info: { paddingHorizontal: 4 },
+  infoText: { fontSize: 12, color: '#888', lineHeight: 17 },
 });

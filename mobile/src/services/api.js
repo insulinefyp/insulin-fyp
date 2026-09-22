@@ -80,4 +80,9 @@ export const api = {
   getTreatmentHistory: () => request('/treatment-parameters/history', { auth: true }),
   createTreatmentVersion: (values) =>
     request('/treatment-parameters', { method: 'POST', body: values, auth: true }),
+
+  getGlucoseCurrent: () => request('/glucose/current', { auth: true }),
+  getSimulator: () => request('/glucose/simulator', { auth: true }),
+  setSimulator: (controls) =>
+    request('/glucose/simulator', { method: 'POST', body: controls, auth: true }),
 };
