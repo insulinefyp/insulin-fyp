@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const { SCENARIO_KEYS } = require('../simulation/scenarios');
+const { RANGE_KEYS, DEFAULT_RANGE } = require('../config/glucoseRanges');
 
 const simulatorControlSchema = z
   .object({
@@ -11,4 +12,8 @@ const simulatorControlSchema = z
     message: 'No changes supplied',
   });
 
-module.exports = { simulatorControlSchema };
+const historyQuerySchema = z.object({
+  range: z.enum([...RANGE_KEYS]).default(DEFAULT_RANGE),
+});
+
+module.exports = { simulatorControlSchema, historyQuerySchema };

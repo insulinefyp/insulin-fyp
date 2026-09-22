@@ -9,6 +9,19 @@ async function getCurrent(req, res, next) {
   }
 }
 
+async function getHistory(req, res, next) {
+  try {
+    const data = await glucoseService.getHistory(req.user, req.validatedQuery.range);
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+function getRanges(req, res) {
+  res.status(200).json({ success: true, data: glucoseService.getRanges() });
+}
+
 async function getSimulator(req, res, next) {
   try {
     const data = await glucoseService.getSimulatorState(req.user);
@@ -27,4 +40,4 @@ async function setSimulator(req, res, next) {
   }
 }
 
-module.exports = { getCurrent, getSimulator, setSimulator };
+module.exports = { getCurrent, getHistory, getRanges, getSimulator, setSimulator };
