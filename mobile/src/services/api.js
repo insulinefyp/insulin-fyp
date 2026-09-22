@@ -82,6 +82,9 @@ export const api = {
     request('/treatment-parameters', { method: 'POST', body: values, auth: true }),
 
   getGlucoseCurrent: () => request('/glucose/current', { auth: true }),
+  getGlucoseRanges: () => request('/glucose/ranges', { auth: true }),
+  getGlucoseHistory: (range) =>
+    request(`/glucose/history?range=${encodeURIComponent(range)}`, { auth: true }),
   getSimulator: () => request('/glucose/simulator', { auth: true }),
   setSimulator: (controls) =>
     request('/glucose/simulator', { method: 'POST', body: controls, auth: true }),

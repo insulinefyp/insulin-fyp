@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
 
 export const GLUCOSE_CURRENT_KEY = ['glucose', 'current'];
+export const GLUCOSE_RANGES_KEY = ['glucose', 'ranges'];
+export const GLUCOSE_HISTORY_KEY = ['glucose', 'history'];
 export const SIMULATOR_KEY = ['glucose', 'simulator'];
 
 // Polls every 15 seconds. With one reading per minute, a new value appears
@@ -11,6 +13,26 @@ export function useCurrentGlucose() {
     queryKey: GLUCOSE_CURRENT_KEY,
     queryFn: () => api.getGlucoseCurrent(),
     refetchInterval: 15000,
+  });
+}
+
+// Range definitions are server constants, so they are fetched once.
+export function useGlucoseRanges() {
+  return useQuery({
+    queryKey: GLUCOSE_RANGES_KEY,
+    queryFn: () => api.getGlucoseRanges(),
+    staleTime: Infinity,
+  });
+}
+
+// Each range is cached separately, so switching back to a range already
+// viewed shows instantly while it refreshes.
+export function useGlucoseHistory(range) {
+  return useQuery({
+    queryKey: [...GLUCOSE_HISTORY_KEY, range],
+    queryFn: () => api.getGlucoseHistory(range),
+    enabled: Boolean(range),
+    refetchInterval: 60000,
   });
 }
 
@@ -32,6 +54,7 @@ export function useSetSimulator() {
     onSuccess: (data) => {
       queryClient.setQueryData(SIMULATOR_KEY, data);
       queryClient.invalidateQueries({ queryKey: GLUCOSE_CURRENT_KEY, exact: true });
+      queryClient.invalidateQueries({ queryKey: GLUCOSE_HISTORY_KEY });
     },
   });
 }

@@ -1,5 +1,6 @@
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import GlucoseReadingCard from '../components/GlucoseReadingCard';
+import GlucoseChart from '../components/GlucoseChart';
 import SimulatorPanel from '../components/SimulatorPanel';
 import { useCurrentGlucose } from '../hooks/useGlucose';
 
@@ -13,11 +14,14 @@ export default function GlucoseScreen() {
     >
       <GlucoseReadingCard />
 
+      <GlucoseChart />
+
       {data ? (
         <View style={styles.info}>
           <Text style={styles.infoText}>
             Source: {data.source} · one reading every {data.intervalSeconds} s ·
-            marked stale after {data.staleAfterSeconds} s without data
+            marked stale after {data.staleAfterSeconds} s without data · trend
+            measured over {data.trendWindowMinutes} min
           </Text>
         </View>
       ) : null}

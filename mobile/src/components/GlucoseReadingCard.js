@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import TrendArrow from './TrendArrow';
 import { useCurrentGlucose } from '../hooks/useGlucose';
 import { useTreatment } from '../hooks/useTreatment';
 import { useNow } from '../hooks/useNow';
@@ -73,6 +74,11 @@ export default function GlucoseReadingCard({ compact = false, onPress }) {
   const range = classifyRange(value, treatment.data?.parameters);
   const visual = status === 'fresh' ? RANGE_STYLE[range] : STALE_STYLE;
 
+  // A trend computed before the data went stale describes the past. The card
+  // suppresses it rather than showing an arrow that looks current.
+  const trend =
+    status === 'fresh' ? data.trend : { available: false, reason: 'data_stale' };
+
   return (
     <Wrapper
       style={[styles.card, { backgroundColor: visual.bg, borderColor: visual.bg }]}
@@ -87,16 +93,20 @@ export default function GlucoseReadingCard({ compact = false, onPress }) {
         </View>
       </View>
 
-      <View style={styles.valueRow}>
-        <Text
-          style={[
-            compact ? styles.valueCompact : styles.value,
-            { color: visual.color },
-          ]}
-        >
-          {value}
-        </Text>
-        <Text style={styles.unit}>{data.unit}</Text>
+      <View style={styles.mainRow}>
+        <View style={styles.valueRow}>
+          <Text
+            style={[
+              compact ? styles.valueCompact : styles.value,
+              { color: visual.color },
+            ]}
+          >
+            {value}
+          </Text>
+          <Text style={styles.unit}>{data.unit}</Text>
+        </View>
+
+        <TrendArrow trend={trend} color={visual.color} showRate={!compact} />
       </View>
 
       <Text style={styles.age}>Updated {formatAge(ageSeconds)}</Text>
@@ -140,10 +150,16 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   badgeText: { fontSize: 12, fontWeight: '600' },
+  mainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   valueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
-  value: { fontSize: 64, fontWeight: '700', letterSpacing: -1 },
+  value: { fontSize: 60, fontWeight: '700', letterSpacing: -1 },
   valueCompact: { fontSize: 40, fontWeight: '700' },
-  unit: { fontSize: 16, color: '#666' },
+  unit: { fontSize: 15, color: '#666' },
   age: { fontSize: 13, color: '#666' },
   hold: { fontSize: 12, color: '#444', lineHeight: 17, marginTop: 4 },
   offline: { fontSize: 12, color: '#b3261e', marginTop: 2 },
