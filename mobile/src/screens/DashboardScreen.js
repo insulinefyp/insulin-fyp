@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, Text } from 'react-native';
 import ConnectionStatus from '../components/ConnectionStatus';
 import GlucoseReadingCard from '../components/GlucoseReadingCard';
 import ParametersStatus from '../components/ParametersStatus';
+import DeviceStatus from '../components/DeviceStatus';
 
 export default function DashboardScreen({ navigation }) {
   return (
@@ -9,6 +10,7 @@ export default function DashboardScreen({ navigation }) {
       <Text style={styles.title}>Dashboard</Text>
       <ConnectionStatus />
       <GlucoseReadingCard compact onPress={() => navigation.navigate('Glucose')} />
+      <DeviceStatus />
       <ParametersStatus />
     </ScrollView>
   );

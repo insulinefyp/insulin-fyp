@@ -88,4 +88,6 @@ export const api = {
   getSimulator: () => request('/glucose/simulator', { auth: true }),
   setSimulator: (controls) =>
     request('/glucose/simulator', { method: 'POST', body: controls, auth: true }),
+
+  getDevice: () => request('/device', { auth: true }),
 };
