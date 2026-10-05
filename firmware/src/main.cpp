@@ -1,8 +1,8 @@
 // Insulin delivery research prototype — device firmware.
 //
-// Stage 7: networking plus temperature monitoring. The device serves a JSON
-// status endpoint that the backend polls. It has no actuators yet; delivery
-// arrives at stage 8.
+// Stage 7.5: networking, temperature monitoring and an on-device display.
+// The device serves a JSON status endpoint that the backend polls. It has no
+// actuators yet; delivery arrives at stage 8.
 //
 // The device never pushes to the backend. All communication is the backend
 // polling this device.
@@ -17,19 +17,20 @@
 
 #include "secrets.h"
 #include "temperature.h"
+#include "display.h"
 
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------
 
-static const char* FIRMWARE_VERSION = "0.7.0";
+static const char* FIRMWARE_VERSION = "0.7.5";
 static const uint16_t HTTP_PORT = 80;
 
 #define RGB_LED_PIN 48
 #define NUM_LEDS 1
 static const uint8_t LED_BRIGHTNESS = 10;
 
-// I2C bus. The sensor is wired here; the OLED will share the same two pins.
+// Shared I2C bus: the BME280 and the SSD1306 both live here.
 #define I2C_SDA_PIN 4
 #define I2C_SCL_PIN 14
 
@@ -38,9 +39,6 @@ static const uint16_t WIFI_ATTEMPT_DELAY_MS = 500;
 static const uint32_t WIFI_CHECK_INTERVAL_MS = 5000;
 static const uint32_t WIFI_RECONNECT_COOLDOWN_MS = 10000;
 
-// Test endpoints that force a temperature. They exist so the warning and
-// critical paths can be demonstrated without heating the sensor. Any reading
-// they produce is flagged simulated wherever it appears.
 static const bool TEST_CONTROLS_ENABLED = true;
 
 // ---------------------------------------------------------------------------
@@ -58,11 +56,6 @@ static bool serverStarted = false;
 
 // ---------------------------------------------------------------------------
 // LED status
-//
-// The LED is the only diagnostic when the board is not on USB. It shows the
-// most severe current condition: red for anything critical, orange for a
-// warning, green when all is well. The app and serial output distinguish
-// which condition it is.
 // ---------------------------------------------------------------------------
 
 enum DeviceState {
@@ -128,6 +121,24 @@ void blinkActivity() {
 }
 
 // ---------------------------------------------------------------------------
+// Display
+// ---------------------------------------------------------------------------
+
+// Gathers what the device currently knows and hands it to the display as one
+// frame, rather than letting callers write to the screen piecemeal.
+void refreshDisplay() {
+  DisplayState s;
+  s.deviceState = stateName();
+  s.wifiConnected = (WiFi.status() == WL_CONNECTED);
+  s.rssi = WiFi.RSSI();
+  s.ipAddress = WiFi.localIP().toString();
+  s.uptimeSeconds = (millis() - bootMillis) / 1000;
+  s.temperature = temperatureGet();
+
+  displayUpdate(s);
+}
+
+// ---------------------------------------------------------------------------
 // HTTP handlers
 // ---------------------------------------------------------------------------
 
@@ -148,8 +159,6 @@ void addTemperature(JsonDocument& doc) {
   temp["chip"] = temperatureChipName();
 
   if (t.available) {
-    // One decimal place: the sensor's resolution does not justify more, and
-    // trailing digits imply precision that is not there.
     temp["celsius"] = roundf(t.celsius * 10.0f) / 10.0f;
     temp["ageSeconds"] = t.ageMillis / 1000;
   } else {
@@ -183,11 +192,15 @@ void handleStatus() {
 
   addTemperature(doc);
 
+  JsonObject display = doc["display"].to<JsonObject>();
+  display["present"] = displayPresent();
+  display["address"] = displayAddress();
+
   JsonObject subsystems = doc["subsystems"].to<JsonObject>();
   subsystems["temperature"] =
       temperatureSensorPresent() ? "ready" : "not_available";
   subsystems["delivery"] = "not_implemented";
-  subsystems["display"] = "not_implemented";
+  subsystems["display"] = displayPresent() ? "ready" : "not_available";
 
   blinkActivity();
   sendJson(200, doc);
@@ -200,11 +213,11 @@ void handleHealth() {
   sendJson(200, doc);
 }
 
-// Test only. POST /test/temperature?c=38.5 forces a value; DELETE clears it.
 void handleTestTemperature() {
   if (server.method() == HTTP_DELETE) {
     temperatureClearOverride();
     applyStateColor();
+    refreshDisplay();
 
     JsonDocument doc;
     doc["ok"] = true;
@@ -224,8 +237,6 @@ void handleTestTemperature() {
 
   float celsius = server.arg("c").toFloat();
 
-  // A plausibility bound, not a safety limit: it only stops a typo from
-  // producing a nonsense test reading.
   if (celsius < -40.0f || celsius > 125.0f) {
     JsonDocument doc;
     doc["ok"] = false;
@@ -237,6 +248,7 @@ void handleTestTemperature() {
 
   temperatureSetOverride(celsius);
   applyStateColor();
+  refreshDisplay();
 
   JsonDocument doc;
   doc["ok"] = true;
@@ -272,6 +284,10 @@ void handleRoot() {
                      ? " at 0x" + String(temperatureAddress(), HEX)
                      : "") + "</p>"
                 "<p>Temperature: " + tempLine + "</p>"
+                "<p>Display: " +
+                (displayPresent()
+                     ? "SSD1306 at 0x" + String(displayAddress(), HEX)
+                     : "not detected") + "</p>"
                 "<hr>"
                 "<p><a href='/status'>/status</a> (JSON, polled by backend)</p>"
                 "<p><a href='/health'>/health</a> (JSON, liveness)</p>"
@@ -295,6 +311,7 @@ void handleNotFound() {
 
 bool connectWifi() {
   setState(STATE_CONNECTING);
+  displayBootMessage("Connecting WiFi...");
 
   WiFi.mode(WIFI_STA);
   WiFi.setHostname(DEVICE_HOSTNAME);
@@ -313,6 +330,7 @@ bool connectWifi() {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Failed to connect to WiFi.");
     setState(STATE_WIFI_FAILED);
+    displayBootMessage("WiFi FAILED");
     return false;
   }
 
@@ -415,14 +433,14 @@ void setup() {
   Serial.println("Academic research prototype. Not for clinical use.");
   Serial.println("=====================================");
 
-  Serial.print("Temperature sensor on SDA=");
+  Serial.print("I2C bus on SDA=");
   Serial.print(I2C_SDA_PIN);
   Serial.print(" SCL=");
-  Serial.print(I2C_SCL_PIN);
-  Serial.println("...");
+  Serial.println(I2C_SCL_PIN);
 
+  // Temperature first: it calls Wire.begin, which the display then shares.
   if (temperatureBegin(I2C_SDA_PIN, I2C_SCL_PIN)) {
-    Serial.print("  Found ");
+    Serial.print("  Sensor: ");
     Serial.print(temperatureChipName());
     Serial.print(" at 0x");
     Serial.println(temperatureAddress(), HEX);
@@ -437,24 +455,33 @@ void setup() {
       Serial.println(")");
     }
   } else {
-    // Not fatal. The device reports not_available and everything else works,
-    // so the rest of the system stays testable without the sensor.
-    Serial.println("  No sensor found. Temperature reports as unavailable.");
-    Serial.println("  Check: SDA/SCL not swapped, VIN on 3V3, wiring secure.");
+    Serial.println("  Sensor: none found, temperature reports unavailable");
+    Serial.println("    Check: SDA/SCL not swapped, VIN on 3V3, wiring secure");
+  }
+
+  // Absent display is not an error. The device works without it and reports
+  // display as not_available.
+  if (displayBegin()) {
+    Serial.print("  Display: SSD1306 at 0x");
+    Serial.println(displayAddress(), HEX);
+    displayBootMessage("Starting...");
+  } else {
+    Serial.println("  Display: none found, continuing without it");
   }
 
   if (connectWifi()) {
     startServices();
   }
+
+  refreshDisplay();
 }
 
 void loop() {
   server.handleClient();
   maintainWifi();
   temperatureUpdate();
+  refreshDisplay();
 
-  // The LED reflects the current temperature status, so it has to be
-  // refreshed as readings change rather than only on state transitions.
   static uint32_t lastLedRefresh = 0;
   if (millis() - lastLedRefresh > 2000) {
     lastLedRefresh = millis();
