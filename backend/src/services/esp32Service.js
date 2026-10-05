@@ -1,5 +1,7 @@
 const axios = require('axios');
 const config = require('../config');
+const temperatureService = require('./temperature.service');
+const { classifyTemperature } = require('../utils/temperatureRules');
 
 // The only module that opens a connection to the device. Everything else
 // reads the cache this keeps.
@@ -8,26 +10,57 @@ const config = require('../config');
 // this one. The advisory layer is advisory: it cannot reach the hardware.
 
 const state = {
-  // Last response that parsed correctly, with when it arrived.
   lastGood: null,
   lastGoodAt: null,
-
   consecutiveFailures: 0,
   lastError: null,
   lastErrorAt: null,
   lastAttemptAt: null,
-
   totalPolls: 0,
   totalFailures: 0,
+  // Raised when the device's own classification disagrees with ours.
+  classificationMismatch: null,
 };
 
 let timer = null;
 let pollInProgress = false;
 
+function parseTemperature(body) {
+  const t = body && typeof body.temperature === 'object' ? body.temperature : null;
+
+  if (!t || t.available !== true) {
+    return {
+      available: false,
+      celsius: null,
+      status: 'unavailable',
+      simulated: false,
+      sensorPresent: Boolean(t && t.sensorPresent),
+      chip: t && typeof t.chip === 'string' ? t.chip : null,
+      ageSeconds: null,
+    };
+  }
+
+  const celsius = Number.isFinite(t.celsius) ? t.celsius : null;
+
+  // Classified here from the raw value, independently of what the device
+  // said. Two layers reaching the same conclusion from the same number;
+  // a disagreement is a fault worth surfacing, not something to paper over.
+  const status = classifyTemperature(celsius);
+
+  return {
+    available: celsius !== null,
+    celsius,
+    status,
+    deviceReportedStatus: typeof t.status === 'string' ? t.status : null,
+    simulated: t.simulated === true,
+    sensorPresent: t.sensorPresent === true,
+    chip: typeof t.chip === 'string' ? t.chip : null,
+    ageSeconds: Number.isFinite(t.ageSeconds) ? t.ageSeconds : null,
+  };
+}
+
 // The device is untrusted input. Its payload is read field by field into a
-// known shape, never spread into a response. A reply that does not look like
-// our firmware counts as a failure rather than being cached as truth: on a
-// hotspot, DHCP can put something else at this address.
+// known shape, never spread into a response.
 function parseDeviceStatus(body) {
   if (!body || typeof body !== 'object') {
     throw new Error('Device returned a non-object response');
@@ -54,6 +87,7 @@ function parseDeviceStatus(body) {
       ip: typeof wifi.ip === 'string' ? wifi.ip : null,
       rssi: Number.isFinite(wifi.rssi) ? wifi.rssi : null,
     },
+    temperature: parseTemperature(body),
     subsystems: {
       temperature:
         typeof subsystems.temperature === 'string'
@@ -68,7 +102,6 @@ function parseDeviceStatus(body) {
 }
 
 async function pollOnce() {
-  // A slow device must not cause overlapping requests to stack up.
   if (pollInProgress) return;
   pollInProgress = true;
 
@@ -79,14 +112,46 @@ async function pollOnce() {
   try {
     const res = await axios.get(`${config.esp32.baseUrl}/status`, {
       timeout: config.esp32.timeoutMs,
-      // Anything other than 200 is a failure, not something to cache.
       validateStatus: (s) => s === 200,
     });
 
     const parsed = parseDeviceStatus(res.data);
+    const observedAt = new Date();
 
     state.lastGood = { ...parsed, roundTripMs: Date.now() - startedAt };
-    state.lastGoodAt = new Date();
+    state.lastGoodAt = observedAt;
+
+    const temp = parsed.temperature;
+
+    // Both layers classify the same raw value, so they must agree. A
+    // disagreement means one of them is wrong and that needs to be visible.
+    if (
+      temp.available &&
+      temp.deviceReportedStatus &&
+      temp.deviceReportedStatus !== temp.status
+    ) {
+      const message = `device reported ${temp.deviceReportedStatus}, backend classified ${temp.status} for ${temp.celsius} C`;
+      if (state.classificationMismatch !== message) {
+        console.error(`[esp32] temperature classification mismatch: ${message}`);
+      }
+      state.classificationMismatch = message;
+    } else {
+      state.classificationMismatch = null;
+    }
+
+    if (temp.available) {
+      // Storage failures must not break polling: the device status is still
+      // useful even if the history cannot be written.
+      temperatureService
+        .recordObservation(parsed.deviceId, {
+          celsius: temp.celsius,
+          simulated: temp.simulated,
+          observedAt,
+        })
+        .catch((err) => {
+          console.error('[esp32] failed to record temperature:', err.message);
+        });
+    }
 
     if (state.consecutiveFailures > 0) {
       console.log(
@@ -111,8 +176,6 @@ async function pollOnce() {
       state.lastError = err.message;
     }
 
-    // Logged once, at the moment it is declared offline, rather than every
-    // poll: otherwise an absent device fills the log.
     if (state.consecutiveFailures === config.esp32.failuresBeforeOffline) {
       console.warn(
         `[esp32] device marked offline after ${state.consecutiveFailures} failures: ${state.lastError}`
@@ -172,8 +235,7 @@ function getSnapshot() {
     lastError: state.lastError,
     lastErrorAt: state.lastErrorAt,
     lastAttemptAt: state.lastAttemptAt,
-    // The last good reading is still returned when offline, with its age.
-    // The app shows it clearly marked as old rather than hiding it.
+    classificationMismatch: state.classificationMismatch,
     device: state.lastGood,
     lastGoodAt: state.lastGoodAt,
     dataAgeSeconds: state.lastGoodAt

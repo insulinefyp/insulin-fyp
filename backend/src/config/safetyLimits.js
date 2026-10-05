@@ -80,4 +80,27 @@ const FIELD_KEYS = Object.freeze(Object.keys(FIELDS));
 // mobile app asks for confirmation before saving an increase.
 const RAISE_SENSITIVE = Object.freeze(['maxBolusUnits', 'maxDailyDoseUnits']);
 
-module.exports = { GLUCOSE_UNIT, FIELDS, FIELD_KEYS, RAISE_SENSITIVE };
+// TEMPERATURE THRESHOLDS — part of the system limits tier.
+//
+// Insulin degrades from HEAT, not cold. Freezing destroys it outright, which
+// is why the low bound is critical rather than a warning.
+//
+// These are instantaneous thresholds. Real degradation depends on cumulative
+// exposure, which is why excursions are recorded with their duration.
+//
+// No API can change these. The firmware applies the same values independently
+// and the backend verifies the two agree.
+const TEMPERATURE = Object.freeze({
+  unit: 'C',
+  criticalLowC: 2,
+  warningHighC: 30,
+  criticalHighC: 37,
+});
+
+module.exports = {
+  GLUCOSE_UNIT,
+  FIELDS,
+  FIELD_KEYS,
+  RAISE_SENSITIVE,
+  TEMPERATURE,
+};

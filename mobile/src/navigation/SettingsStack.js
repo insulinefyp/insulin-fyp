@@ -6,6 +6,7 @@ import ProfileHistoryScreen from '../screens/profile/ProfileHistoryScreen';
 import TreatmentScreen from '../screens/treatment/TreatmentScreen';
 import EditTreatmentScreen from '../screens/treatment/EditTreatmentScreen';
 import TreatmentHistoryScreen from '../screens/treatment/TreatmentHistoryScreen';
+import TemperatureScreen from '../screens/temperature/TemperatureScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -46,6 +47,11 @@ export default function SettingsStack() {
         name="TreatmentHistory"
         component={TreatmentHistoryScreen}
         options={{ title: 'Version history' }}
+      />
+      <Stack.Screen
+        name="Temperature"
+        component={TemperatureScreen}
+        options={{ title: 'Temperature' }}
       />
     </Stack.Navigator>
   );

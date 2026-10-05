@@ -32,8 +32,6 @@ export default function SettingsScreen({ navigation }) {
         text: 'Sign out',
         style: 'destructive',
         onPress: async () => {
-          // Cached data belongs to this user. Without clearing it, the next
-          // person to sign in on this device would briefly see it.
           queryClient.clear();
           await signOut();
         },
@@ -58,6 +56,11 @@ export default function SettingsScreen({ navigation }) {
         icon="medkit-outline"
         label="Treatment parameters"
         onPress={() => navigation.navigate('Treatment')}
+      />
+      <NavRow
+        icon="thermometer-outline"
+        label="Temperature"
+        onPress={() => navigation.navigate('Temperature')}
       />
 
       <View style={styles.card}>

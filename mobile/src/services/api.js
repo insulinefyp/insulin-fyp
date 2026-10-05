@@ -90,4 +90,11 @@ export const api = {
     request('/glucose/simulator', { method: 'POST', body: controls, auth: true }),
 
   getDevice: () => request('/device', { auth: true }),
+  getTemperatureHistory: (hours = 6) =>
+    request(`/device/temperature/history?hours=${hours}`, { auth: true }),
+  getTemperatureExcursions: (includeSimulated = false) =>
+    request(
+      `/device/temperature/excursions?includeSimulated=${includeSimulated}`,
+      { auth: true }
+    ),
 };
