@@ -29,14 +29,27 @@ const config = {
 
   simulator: {
     enabled: toBool(process.env.SIMULATOR_ENABLED, true),
-    // Scenario and pause controls exist for testing. Off by default outside
-    // development so they cannot be reached in a demo build by accident.
     controlsEnabled: toBool(
       process.env.SIMULATOR_CONTROLS_ENABLED,
       env === 'development'
     ),
   },
+
+  // The backend polls the device. The device never pushes, and the mobile
+  // app never talks to the device directly.
+  esp32: {
+    enabled: toBool(process.env.ESP32_ENABLED, true),
+    host: process.env.ESP32_HOST || '',
+    port: toInt(process.env.ESP32_PORT, 80),
+    pollIntervalSeconds: toInt(process.env.ESP32_POLL_INTERVAL_SECONDS, 3),
+    timeoutMs: toInt(process.env.ESP32_TIMEOUT_MS, 2000),
+    failuresBeforeOffline: toInt(process.env.ESP32_FAILURES_BEFORE_OFFLINE, 3),
+  },
 };
+
+config.esp32.baseUrl = config.esp32.host
+  ? `http://${config.esp32.host}:${config.esp32.port}`
+  : null;
 
 const problems = [];
 
@@ -47,6 +60,15 @@ if (config.glucose.intervalSeconds < 5 || config.glucose.intervalSeconds > 900) 
 }
 if (config.glucose.staleAfterIntervals < 1) {
   problems.push('CGM_STALE_AFTER_INTERVALS must be at least 1');
+}
+if (config.esp32.enabled && !config.esp32.host) {
+  problems.push('ESP32_ENABLED is true but ESP32_HOST is empty');
+}
+if (config.esp32.timeoutMs < 200 || config.esp32.timeoutMs > 10000) {
+  problems.push('ESP32_TIMEOUT_MS must be between 200 and 10000');
+}
+if (config.esp32.failuresBeforeOffline < 1) {
+  problems.push('ESP32_FAILURES_BEFORE_OFFLINE must be at least 1');
 }
 
 if (problems.length > 0) {

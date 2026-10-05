@@ -3,6 +3,7 @@ const app = require('./app');
 const config = require('./config');
 const { connectDatabase } = require('./config/database');
 const simulator = require('./simulation/glucoseSimulator');
+const esp32Service = require('./services/esp32Service');
 
 function getLanAddresses() {
   const interfaces = os.networkInterfaces();
@@ -32,6 +33,10 @@ async function start() {
   } else {
     console.log('Glucose simulator disabled');
   }
+
+  // Started after the database but before listening. A device that is absent
+  // must not prevent the API from serving.
+  esp32Service.start();
 
   app.listen(config.port, config.host, () => {
     console.log(`\nServer running in ${config.env} mode`);

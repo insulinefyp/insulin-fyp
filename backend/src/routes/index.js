@@ -4,6 +4,7 @@ const authRoutes = require('./auth.routes');
 const profileRoutes = require('./profile.routes');
 const treatmentRoutes = require('./treatment.routes');
 const glucoseRoutes = require('./glucose.routes');
+const deviceRoutes = require('./device.routes');
 
 const router = express.Router();
 
@@ -12,5 +13,6 @@ router.use('/auth', authRoutes);
 router.use('/patient/profile', profileRoutes);
 router.use('/treatment-parameters', treatmentRoutes);
 router.use('/glucose', glucoseRoutes);
+router.use('/device', deviceRoutes);
 
 module.exports = router;
