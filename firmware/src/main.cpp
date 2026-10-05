@@ -261,6 +261,8 @@ void maintainWifi() {
   if (WiFi.status() == WL_CONNECTED) {
     if (deviceState != STATE_READY) {
       Serial.println("WiFi recovered.");
+      Serial.print("  IP address: ");
+      Serial.println(WiFi.localIP());
       setState(STATE_READY);
       startServices();
     }
